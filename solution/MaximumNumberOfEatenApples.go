@@ -1,49 +1,84 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"sort"
+)
 
 func main() {
 	fmt.Println("expected= 4 output=", eatenApples([]int{2, 1, 10}, []int{2, 10, 1}))
 	fmt.Println("expected= 7 output=", eatenApples([]int{1, 2, 3, 5, 2}, []int{3, 2, 1, 4, 2}))
 	fmt.Println("expected= 5 output=", eatenApples([]int{3, 0, 0, 0, 0, 2}, []int{3, 0, 0, 0, 0, 2}))
 }
+
+//最小堆贪心
 func eatenApples(apples []int, days []int) int {
-	//循环apples数组
-	//第i天是0的元素，跳过
-	//第i天不是0的元素，轮询当天所有苹果
-	//判断当天的苹果是否腐烂
-	//不腐烂当天苹果数-1，天+1
-	//腐烂天+1，跳过第i天苹果
-	rst := 0
+	//吃苹果数
+	eaten := 0
 	//当前第n天
 	day_idx := 0
-	apples_len := len(apples)
-	//第i天出产的苹果
-	for i := 0; i < apples_len; i++ {
-		//第i天有多少个苹果
-		day_app_len := apples[i]
-		//第i天没有苹果跳过
-		if 0 == day_app_len {
-			//当天没有苹果吃
-			if i >= day_idx {
-				day_idx++
+	//苹果篮子
+	appleMap := make(map[int]int)
+	appleList := []int{}
+	//
+	app_len := len(apples)
+	for {
+		day_idx++
+		//标识当天苹果的腐烂日期，将苹果push到篮子里
+		if app_len >= day_idx && 0 != apples[day_idx-1] {
+			day_at := day_idx + days[day_idx-1]
+			_, ok := appleMap[day_at]
+			if ok {
+				appleMap[day_at] += apples[day_idx-1]
+			} else {
+				appleMap[day_at] = apples[day_idx-1]
 			}
-			continue
+
+			appleList = append(appleList, day_at)
+
+			sort.Slice(appleList, func(i, j int) bool {
+				return i > j
+			})
 		}
-		max := (i + days[i])
-		//轮询第i天的所有苹果
-		for j := 0; j < day_app_len; j++ {
-			//当天的苹果腐烂
-			if max < day_idx {
-				day_idx++
+		fmt.Println("第", day_idx, "天长了", apples[day_idx-1], "个苹果")
+		fmt.Println("篮子还有苹果数：", appleMap, "; 序列：", appleList)
+
+		//从篮子取一个腐烂日期最小的苹果
+		count := len(appleList)
+		del_at := -1
+		for i := 0; i < count; i++ {
+			day_at := appleList[i]
+			num, ok := appleMap[day_at]
+			//该天是否有苹果，List存在重复天就会出现没有苹果的情况
+			if !ok {
+				del_at = i
+				continue
+			}
+			//是否腐烂了
+			if day_at >= day_idx {
+				delete(appleMap, day_at)
+				del_at = i
+				continue
+			}
+			//吃一个苹果
+			num--
+			eaten++
+			fmt.Println("第", day_idx, "天吃第", day_at, "的苹果，第", day_at, "天的苹果剩余", num, "个")
+			//如果该天没有苹果了则删除该天
+			if num <= 0 {
+				delete(appleMap, day_at)
+				del_at = i
 				break
 			}
-			if max == day_idx {
-				break
-			}
-			day_idx++
-			rst++
+			appleMap[day_at] = num
+			break
+		}
+		if del_at > -1 {
+			appleList = appleList[del_at:]
+		}
+		if len(appleList) < 1 {
+			break
 		}
 	}
-	return rst
+	return eaten
 }
