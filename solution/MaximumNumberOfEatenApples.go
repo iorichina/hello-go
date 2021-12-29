@@ -11,7 +11,7 @@ func main() {
 	fmt.Println("expected= 5 output=", eatenApples([]int{3, 0, 0, 0, 0, 2}, []int{3, 0, 0, 0, 0, 2}))
 }
 
-//最小堆贪心
+//贪心
 func eatenApples(apples []int, days []int) int {
 	//吃苹果数
 	eaten := 0
@@ -24,24 +24,28 @@ func eatenApples(apples []int, days []int) int {
 	app_len := len(apples)
 	for {
 		day_idx++
+		fmt.Println()
+		day_app_len := 0
 		//标识当天苹果的腐烂日期，将苹果push到篮子里
 		if app_len >= day_idx && 0 != apples[day_idx-1] {
-			day_at := day_idx + days[day_idx-1]
+			day_app_len = apples[day_idx-1]
+			day_at := day_idx + days[day_idx-1] - 1
 			_, ok := appleMap[day_at]
 			if ok {
-				appleMap[day_at] += apples[day_idx-1]
+				appleMap[day_at] += day_app_len
 			} else {
-				appleMap[day_at] = apples[day_idx-1]
+				appleMap[day_at] = day_app_len
 			}
 
 			appleList = append(appleList, day_at)
 
 			sort.Slice(appleList, func(i, j int) bool {
-				return i > j
+				return appleList[i] < appleList[j]
 			})
+			fmt.Println("第", day_idx, "天长了", day_app_len, "个可以保存到第", day_at, "天的苹果")
 		}
-		fmt.Println("第", day_idx, "天长了", apples[day_idx-1], "个苹果")
-		fmt.Println("篮子还有苹果数：", appleMap, "; 序列：", appleList)
+
+		fmt.Println("第", day_idx, "天吃苹果前篮子还有苹果数：", appleMap, "; 序列：", appleList)
 
 		//从篮子取一个腐烂日期最小的苹果
 		count := len(appleList)
@@ -55,7 +59,8 @@ func eatenApples(apples []int, days []int) int {
 				continue
 			}
 			//是否腐烂了
-			if day_at >= day_idx {
+			if day_idx > day_at {
+				fmt.Println("第", day_idx, "天，可以保存到第", day_at, "天的苹果腐烂了", num, "个")
 				delete(appleMap, day_at)
 				del_at = i
 				continue
@@ -63,7 +68,7 @@ func eatenApples(apples []int, days []int) int {
 			//吃一个苹果
 			num--
 			eaten++
-			fmt.Println("第", day_idx, "天吃第", day_at, "的苹果，第", day_at, "天的苹果剩余", num, "个")
+			fmt.Println("第", day_idx, "天吃可以保存到第", day_at, "天的苹果，可以保存到第", day_at, "天的苹果剩余", num, "个")
 			//如果该天没有苹果了则删除该天
 			if num <= 0 {
 				delete(appleMap, day_at)
@@ -73,10 +78,14 @@ func eatenApples(apples []int, days []int) int {
 			appleMap[day_at] = num
 			break
 		}
-		if del_at > -1 {
-			appleList = appleList[del_at:]
+		if del_at+1 >= count {
+			appleList = []int{}
+		} else if del_at > -1 {
+			appleList = appleList[del_at+1:]
 		}
-		if len(appleList) < 1 {
+		fmt.Println("第", day_idx, "天吃苹果后篮子还有苹果数：", appleMap, "; 序列：", appleList)
+
+		if len(appleMap) < 1 && day_idx >= app_len {
 			break
 		}
 	}
