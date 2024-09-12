@@ -10,12 +10,10 @@ import (
     "time"
 )
 
-// go build tcp_middleware.go
-//
-// [nohup] sudo ./tcp_middleware >>middleware.log 2>&1 &
-//
-// TCP Server端测试
-// 处理函数
+func tcp_client() {
+    
+}
+
 func process(conn net.Conn) {
     var mac string
     defer func(conn net.Conn) {
@@ -36,10 +34,10 @@ func process(conn net.Conn) {
     }
 
     var n int
+    reader := bufio.NewReader(conn)
+    var buf [512]byte
     for {
         now = time.Now().Format("2006-01-02 15:04:05.000")
-        reader := bufio.NewReader(conn)
-        var buf [512]byte
         n, err = reader.Read(buf[:]) // 读取数据
         if err != nil {
             if errors.Is(err, io.EOF) {
@@ -54,19 +52,17 @@ func process(conn net.Conn) {
         if n > 8 && 0xFE == buf[0] && 0x01 == buf[3] {
             if 0x34 == buf[7] {
                 mac = strings.Join([]string{string(buf[9:11]), string(buf[11:13]), string(buf[13:15]), string(buf[15:17]), string(buf[17:19]), string(buf[19:21])}, ":")
-                fmt.Printf("%v[%v][%v]读 %#x 状态 %d (0=idle,1=playing,>1=error)\n", now, remote, mac, buf[7], buf[8])
             }
             if 0x35 == buf[7] {
                 mac = strings.Join([]string{string(buf[8:10]), string(buf[10:12]), string(buf[12:14]), string(buf[14:16]), string(buf[16:18]), string(buf[18:20])}, ":")
                 fmt.Printf("%v[%v][%v]读 %#x 心跳\n", now, remote, mac, buf[7])
             }
-            fmt.Printf("%v[%v][%v]读 %#x\t% X\n", now, remote, mac, buf[7], buf[:n])
-            continue
+            if 0x30 == buf[7] || 0x3b == buf[7] {
+                fmt.Printf("%v[%v][%v]读 %#x\t% X\n", now, remote, mac, buf[7], buf[:n])
+            }
         }
 
-        recvStr := string(buf[:n])
-        fmt.Printf("%v[%v]读 %v\t% X\n", now, remote, recvStr, buf[:n])
-        _, err = conn.Write([]byte(recvStr))
+        _, err = client.Write(buf[:n])
         if err != nil {
             fmt.Printf("%v[%v][%v] Write err %v\n", now, remote, mac, err)
             continue
@@ -74,8 +70,8 @@ func process(conn net.Conn) {
     }
 }
 
-func main() {
-    listen, err := net.Listen("tcp", "0.0.0.0:9999")
+func tcp_server() {
+    listen, err := net.Listen("tcp", "0.0.0.0:80")
     if err != nil {
         fmt.Printf("%v Listen() failed, err %#v\n", time.Now().Format("2006-01-02 15:04:05.000"), err)
         return
@@ -88,4 +84,8 @@ func main() {
         }
         go process(conn) // 启动一个goroutine来处理客户端的连接请求
     }
+}
+
+func main() {
+    tcp_server()
 }
