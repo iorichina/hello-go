@@ -12,12 +12,13 @@ import (
 )
 
 func tcpClient() (net.Conn, error) {
-	return net.Dial("tcp", "127.0.0.1:8888")
+	return net.Dial("tcp", "406a7637n7.goho.co:80")
 }
 
 func serverProcess(logger *log.Logger, conn net.Conn) {
 	now := time.Now().Format("2006-01-02 15:04:05.000")
 	var mac string
+
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
@@ -49,10 +50,6 @@ func serverProcess(logger *log.Logger, conn net.Conn) {
 
 	closeChan := make(chan error)
 	defer close(closeChan)
-	connChan := make(chan error)
-	defer close(connChan)
-	clientChan := make(chan error)
-	defer close(clientChan)
 	macChan := make(chan string)
 	defer close(macChan)
 	go func(macChan chan string) {
@@ -60,15 +57,22 @@ func serverProcess(logger *log.Logger, conn net.Conn) {
 			mac = m
 		}
 	}(macChan)
+
 	go handleServer(logger, macChan, conn, client, closeChan)
-	go handleClient(logger, conn, connChan, client, clientChnn)
-	err = <- closeChan
+	go handleClient(logger, macChan, conn, client, closeChan)
+	err = <-closeChan
+	logger.Printf("%v[%v]server[%v] or client[%v] err %v\t%#v disconnect\n", now, mac, conn.RemoteAddr(), client.RemoteAddr(), err.Error(), err)
 }
 
-func handleClient(logger *log.Logger, conn net.Conn, client net.Conn, closeChan chan error) {
+func handleClient(logger *log.Logger, macChan chan string, conn net.Conn, client net.Conn, closeChan chan error) {
 	remote := client.RemoteAddr()
 	now := time.Now().Format("2006-01-02 15:04:05.000")
 	var mac string
+	go func(macChan chan string) {
+		for m := range macChan {
+			mac = m
+		}
+	}(macChan)
 	var err error
 	var n int
 	reader := bufio.NewReader(client)
