@@ -2,7 +2,10 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
+	"io"
+	"log"
 	"net"
 	"os"
 	"strconv"
@@ -12,24 +15,36 @@ import (
 
 // TCP 客户端
 func main() {
-	conn, err := net.Dial("tcp", "127.0.0.1:80")
+	now := time.Now().Format("2006-01-02 15:04:05.000")
+	f, err := os.OpenFile("client.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|os.ModePerm)
 	if err != nil {
-		fmt.Printf("%v Dial() failed, err %#v\n", time.Now().Format("2006-01-02 15:04:05.000"), err)
+		log.Fatalf("create file client.log failed: %v", err)
+	}
+	logger := log.New(io.MultiWriter(os.Stdout, f), "", 0)
+
+	client, err := net.Dial("tcp", "127.0.0.1:8880")
+	if err != nil {
+		fmt.Printf("%v client Dial(%v) failed, err %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), "127.0.0.1:8880", err.Error(), err)
 		return
 	}
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
-			fmt.Printf("%v[%v] Close() err %#v\n", time.Now().Format("2006-01-02 15:04:05.000"), conn.RemoteAddr(), err)
+			fmt.Printf("%v[%v]client Close() err %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), conn.RemoteAddr(), err.Error(), err)
 		}
-	}(conn) // 关闭TCP连接
+	}(client) // 关闭TCP连接
+	now = time.Now().Format("2006-01-02 15:04:05.000")
+	remote := client.RemoteAddr()
+	logger.Printf("%v[%v]Connected by %v\n", now, remote, client.LocalAddr())
+
 	inputReader := bufio.NewReader(os.Stdin)
-	for {
+	inputChan := make(chan []byte)
+	go func(reader *bufio.Reader, inputChan chan []byte) {
 		input, _ := inputReader.ReadString('\n') // 读取用户输入
 		inputInfo := strings.Trim(input, "\r\n")
-		if strings.ToUpper(inputInfo) == "Q" { // 如果输入q就退出
-			return
-		}
+		//if strings.ToUpper(inputInfo) == "Q" { // 如果输入q就退出
+		//	return
+		//}
 
 		var ss []byte
 		//fe 86 e2 01 79 1d 0b 31 00 01 3d
@@ -45,18 +60,43 @@ func main() {
 		} else {
 			ss = []byte(inputInfo)
 		}
-		_, err := conn.Write(ss) // 发送数据
+
+		inputChan <- ss
+	}(inputReader, inputChan)
+
+	reader := bufio.NewReader(client)
+	buf := [512]byte{}
+	bb := []byte{254, 134, 226, 1, 121, 29, 9, 52, 61}
+	var tb []byte = nil
+	for {
+		if nil == tb {
+			tb = bb
+		}
+		_, err = client.Write(tb) // 发送数据
 		if err != nil {
-			fmt.Printf("%v[%v]Write(%v) err %#v\n", time.Now().Format("2006-01-02 15:04:05.000"), conn.RemoteAddr(), inputInfo, err)
+			logger.Printf("%v[%v]client Write(0x34) err %v\n", now, remote, err)
+			return
+		}
+		tb = nil
+
+		_, err = reader.Read(buf[:])
+		now = time.Now().Format("2006-01-02 15:04:05.000")
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				logger.Printf("%v[%v]client Read EOF %#v\n", now, remote, err)
+			} else {
+				logger.Printf("%v[%v]client Read failed err %v\t%#v\n", now, remote, err.Error(), err)
+			}
 			return
 		}
 
-		buf := [512]byte{}
-		n, err := conn.Read(buf[:])
-		if err != nil {
-			fmt.Printf("%v[%v]Read() err %#v\n", time.Now().Format("2006-01-02 15:04:05.000"), conn.RemoteAddr(), err)
-			return
+		select {
+		case ss, ok := <-inputChan:
+			if !ok {
+				break
+			}
+			tb = ss
+		case <-time.After(10 * time.Second):
 		}
-		fmt.Println(string(buf[:n]))
 	}
 }
