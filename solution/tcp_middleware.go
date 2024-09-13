@@ -31,6 +31,10 @@ func serverProcess(logger *log.Logger, conn net.Conn) {
 
 	var err error
 	client, err := tcpClient()
+	if err != nil {
+		logger.Printf("%v[%v]client Connect to remote failed, err: %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), conn.RemoteAddr(), err.Error(), err)
+		return
+	}
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
@@ -116,9 +120,9 @@ func handleServer(logger *log.Logger, macChan chan string, conn net.Conn, client
 	reader := bufio.NewReader(conn)
 	var buf [512]byte
 	for {
-		now = time.Now().Format("2006-01-02 15:04:05.000")
 		n, err = reader.Read(buf[:]) // 读取数据
 		if err != nil {
+			now = time.Now().Format("2006-01-02 15:04:05.000")
 			if errors.Is(err, io.EOF) {
 				logger.Printf("%v[%v][%v]server Read EOF %#v\n", now, remote, mac, err)
 			} else {
@@ -155,7 +159,7 @@ func handleServer(logger *log.Logger, macChan chan string, conn net.Conn, client
 }
 
 func tcpServer(logger *log.Logger) {
-	listen, err := net.Listen("tcp", "0.0.0.0:80")
+	listen, err := net.Listen("tcp", "0.0.0.0:8880")
 	if err != nil {
 		logger.Printf("%v Listen() failed, err %#v\n", time.Now().Format("2006-01-02 15:04:05.000"), err)
 		return
@@ -163,7 +167,7 @@ func tcpServer(logger *log.Logger) {
 	for {
 		conn, err := listen.Accept() // 监听客户端的连接请求
 		if err != nil {
-			logger.Printf("%v Accept() failed, err: %#v\n", time.Now().Format("2006-01-02 15:04:05.000"), err)
+			logger.Printf("%v Accept() failed, err: %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), err.Error(), err)
 			continue
 		}
 		go serverProcess(logger, conn) // 启动一个goroutine来处理客户端的连接请求
@@ -171,9 +175,9 @@ func tcpServer(logger *log.Logger) {
 }
 
 func main() {
-	f, err := os.OpenFile("log.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|os.ModePerm)
+	f, err := os.OpenFile("middleware.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModeAppend|os.ModePerm)
 	if err != nil {
-		log.Fatalf("create file log.log failed: %v", err)
+		log.Fatalf("create file middleware.log failed: %v", err)
 	}
 	logger := log.New(io.MultiWriter(os.Stdout, f), "", 0)
 	tcpServer(logger)
