@@ -19,18 +19,19 @@ import (
 // 处理函数
 func process(logger *log.Logger, conn net.Conn) {
 	now := time.Now().Format("2006-01-02 15:04:05.000")
+	remote := conn.RemoteAddr()
 	var mac string
 
-	defer func(conn net.Conn) {
+	defer func() {
 		err := conn.Close()
+		logger.Printf("%v[%v][%v]Connection Close\n", now, remote, mac)
 		if err != nil {
 			now := time.Now().Format("2006-01-02 15:04:05.000")
-			logger.Printf("%v[%v][%v]server Close err %v\t%#v\n", now, conn.RemoteAddr(), mac, err.Error(), err)
+			logger.Printf("%v[%v][%v]server Close err %v\t%#v\n", now, remote, mac, err.Error(), err)
 		}
-	}(conn) // 关闭连接
+	}() // 关闭连接
 	now = time.Now().Format("2006-01-02 15:04:05.000")
-	remote := conn.RemoteAddr()
-	logger.Printf("%v[%v]Connected to %v\n", now, remote, conn.LocalAddr())
+	logger.Printf("%v[%v][%v]Connection Connected to %v\n", now, remote, mac, conn.LocalAddr())
 
 	var err error
 	_, err = conn.Write([]byte{254, 134, 226, 1, 121, 29, 11, 48, 90, 0, 149})
@@ -93,7 +94,7 @@ func process(logger *log.Logger, conn net.Conn) {
 				}
 				_, err = conn.Write([]byte{254, 73, 66, 1, 182, 189, 11, 49, 0, 1, 61})
 				if err != nil {
-					logger.Printf("%v[%v][%v]server Write(0x30) err %v\n", now, remote, mac, err)
+					logger.Printf("%v[%v][%v]server Write(0x31) err %v\n", now, remote, mac, err)
 					continue
 				}
 				_, err = conn.Write([]byte{254, 134, 226, 1, 121, 29, 10, 50, 2, 62})
