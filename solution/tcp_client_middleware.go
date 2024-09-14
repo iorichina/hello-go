@@ -31,12 +31,12 @@ func handleLocal(logger *log.Logger, macChan chan string, localConn net.Conn, lo
 			if nil == localConn {
 				for {
 					if nil == localConn {
-						localConn = <-localConnChan
+						_ = <-readerChan
 					}
 					if nil == localConn {
 						continue
 					}
-					readerChan <-bufio.NewReader(localConn)
+					break
 				}
 			}
 			_, err = localConn.Write(bb)
@@ -55,7 +55,17 @@ func handleLocal(logger *log.Logger, macChan chan string, localConn net.Conn, lo
 
 	for {
 		if nil == reader {
-			reader = <-readerChan
+			for {
+				if nil == localConn {
+					localConn = <-localConnChan
+				}
+				if nil == localConn {
+					continue
+				}
+				reader = bufio.NewReader(localConn)
+				readerChan<- reader
+				break
+			}
 		}
 		n, err = reader.Read(buf[:]) // 读取数据
 		if err != nil {
@@ -114,12 +124,12 @@ func handleRemote(logger *log.Logger, macChan chan string, remoteConn net.Conn, 
 			if nil == remoteConn {
 				for {
 					if nil == remoteConn {
-						remoteConn = <-remoteConnChan
+						_ = <-readerChan
 					}
 					if nil == remoteConn {
 						continue
 					}
-					readerChan <-bufio.NewReader(remoteConn)
+					break
 				}
 			}
 			_, err = remoteConn.Write(bb)
@@ -131,7 +141,17 @@ func handleRemote(logger *log.Logger, macChan chan string, remoteConn net.Conn, 
 	}()
 	for {
 		if nil == reader {
-			reader = <-readerChan
+			for {
+				if nil == remoteConn {
+					remoteConn = <-remoteConnChan
+				}
+				if nil == remoteConn {
+					continue
+				}
+				reader = bufio.NewReader(remoteConn)
+				readerChan<- reader
+				break
+			}
 		}
 		n, err = reader.Read(buf[:]) // 读取数据
 		if err != nil {
@@ -210,13 +230,13 @@ func clientMiddleware(logger *log.Logger, localAddr, remoteAddr string, localCon
 		select {
 		case err = <-localChan:
 			logger.Printf("%v[%v][%v]local err %v\t%#v disconnect, try to reconnect\n", now, localAddr,mac,  err.Error(), err)
-			localConn, _ = net.Dial("tcp", localAddr)
-			logger.Printf("%v[%v][%v]local Connection Connected\n", now, localAddr, mac)
+			localConn, err = net.Dial("tcp", localAddr)
+			logger.Printf("%v[%v][%v]local Connection reconnecting %v\n", now, localAddr, mac, err)
 			localConnChan <-localConn
 		case err = <-remoteChan:
 			logger.Printf("%v[%v][%v]remote err %v\t%#v disconnect, try to reconnect\n", now,  remoteAddr,mac, err.Error(), err)
-			remoteConn, _ = net.Dial("tcp", remoteAddr)
-			logger.Printf("%v[%v][%v]remote Connection Connected\n", now, remoteAddr, mac)
+			remoteConn, err = net.Dial("tcp", remoteAddr)
+			logger.Printf("%v[%v][%v]remote Connection reconnecting %v\n", now, remoteAddr, mac, err)
 			remoteConnChan <-remoteConn
 		}
 	}
