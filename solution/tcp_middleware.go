@@ -12,13 +12,19 @@ import (
 )
 
 func tcpClient() (net.Conn, error) {
-	return net.Dial("tcp", "406a7637n7.goho.co:80")
+	return net.Dial("tcp", "406a7637n7.goho.co:11180")
 }
 
 func serverProcess(logger *log.Logger, conn net.Conn) {
 	now := time.Now().Format("2006-01-02 15:04:05.000")
 	var mac string
 
+	defer func() {
+        if r := recover(); r != nil {
+			now := time.Now().Format("2006-01-02 15:04:05.000")
+            logger.Printf("%v[%v]Recovered from panic: %#v", now, mac, r)
+        }
+    }()
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {

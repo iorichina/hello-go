@@ -109,11 +109,11 @@ func process(logger *log.Logger, conn net.Conn) {
 
 		recvStr := string(buf[:n])
 		logger.Printf("%v[%v]server 读 %v\t% X\n", now, remote, recvStr, buf[:n])
-		_, err = conn.Write([]byte(recvStr))
-		if err != nil {
-			logger.Printf("%v[%v][%v]server Reply err %v\n", now, remote, mac, err)
-			continue
-		} // 发送数据
+		// _, err = conn.Write([]byte(recvStr))
+		// if err != nil {
+		// 	logger.Printf("%v[%v][%v]server Reply err %v\n", now, remote, mac, err)
+		// 	continue
+		// } // 发送数据
 	}
 }
 

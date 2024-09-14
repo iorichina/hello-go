@@ -2,8 +2,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net"
@@ -22,15 +20,15 @@ func main() {
 	}
 	logger := log.New(io.MultiWriter(os.Stdout, f), "", 0)
 
-	client, err := net.Dial("tcp", "127.0.0.1:8880")
+	client, err := net.Dial("tcp", "406a7637n7.goho.co:11180")
 	if err != nil {
-		fmt.Printf("%v client Dial(%v) failed, err %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), "127.0.0.1:8880", err.Error(), err)
+		logger.Printf("%v client Dial(%v) failed, err %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), "127.0.0.1:8880", err.Error(), err)
 		return
 	}
 	defer func(conn net.Conn) {
 		err := conn.Close()
 		if err != nil {
-			fmt.Printf("%v[%v]client Close() err %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), conn.RemoteAddr(), err.Error(), err)
+			logger.Printf("%v[%v]client Close() err %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), conn.RemoteAddr(), err.Error(), err)
 		}
 	}(client) // 关闭TCP连接
 	now = time.Now().Format("2006-01-02 15:04:05.000")
@@ -64,8 +62,8 @@ func main() {
 		inputChan <- ss
 	}(inputReader, inputChan)
 
-	reader := bufio.NewReader(client)
-	buf := [512]byte{}
+	// reader := bufio.NewReader(client)
+	// buf := [512]byte{}
 	bb := []byte{254, 134, 226, 1, 121, 29, 9, 52, 61}
 	var tb []byte = nil
 	for {
@@ -79,16 +77,16 @@ func main() {
 		}
 		tb = nil
 
-		_, err = reader.Read(buf[:])
-		now = time.Now().Format("2006-01-02 15:04:05.000")
-		if err != nil {
-			if errors.Is(err, io.EOF) {
-				logger.Printf("%v[%v]client Read EOF %#v\n", now, remote, err)
-			} else {
-				logger.Printf("%v[%v]client Read failed err %v\t%#v\n", now, remote, err.Error(), err)
-			}
-			return
-		}
+		// _, err = reader.Read(buf[:])
+		// now = time.Now().Format("2006-01-02 15:04:05.000")
+		// if err != nil {
+		// 	if errors.Is(err, io.EOF) {
+		// 		logger.Printf("%v[%v]client Read EOF %#v\n", now, remote, err)
+		// 	} else {
+		// 		logger.Printf("%v[%v]client Read failed err %v\t%#v\n", now, remote, err.Error(), err)
+		// 	}
+		// 	return
+		// }
 
 		select {
 		case ss, ok := <-inputChan:
