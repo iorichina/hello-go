@@ -60,6 +60,7 @@ func handleLocal(logger *log.Logger, macChan chan string, localConn net.Conn, lo
 					localConn = <-localConnChan
 				}
 				if nil == localConn {
+					localChan<- errors.New("need retry")
 					continue
 				}
 				reader = bufio.NewReader(localConn)
@@ -146,6 +147,7 @@ func handleRemote(logger *log.Logger, macChan chan string, remoteConn net.Conn, 
 					remoteConn = <-remoteConnChan
 				}
 				if nil == remoteConn {
+					remoteChan<- errors.New("need retry")
 					continue
 				}
 				reader = bufio.NewReader(remoteConn)
