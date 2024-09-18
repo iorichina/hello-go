@@ -95,14 +95,24 @@ func clientMiddleware(localAddr string, localTimeout time.Duration, remoteAddr s
 	for {
 		select {
 		case err = <-localChan:
+			start := time.Now()
 			logger.Printf("[%v][%v]err %v disconnected, trying to reconnect\n", localAddr, mac, err.Error())
 			localConn, err = net.DialTimeout("tcp", localAddr, localTimeout)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", localAddr, mac, err)
+			duration := localTimeout - time.Since(start)
+			if duration > 0 {
+				time.Sleep(duration)
+			}
 			localConnChan <- localConn
 		case err = <-remoteChan:
+			start := time.Now()
 			logger.Printf("[%v][%v]err %v disconnect, trying to reconnect\n", remoteAddr, mac, err.Error())
 			remoteConn, err = net.DialTimeout("tcp", remoteAddr, remoteTimeout)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", remoteAddr, mac, err)
+			duration := remoteTimeout - time.Since(start)
+			if duration > 0 {
+				time.Sleep(duration)
+			}
 			remoteConnChan <- remoteConn
 		}
 	}
