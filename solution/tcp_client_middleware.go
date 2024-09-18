@@ -29,21 +29,24 @@ func main() {
 		logger.Fatalf("parse remote timeout fail,err:%s", err)
 	}
 
-	localConn, err := net.DialTimeout("tcp", localAddr, time.Duration(localTimeout)*time.Millisecond)
+	localTimeoutDuration := time.Duration(localTimeout) * time.Millisecond
+	localConn, err := net.DialTimeout("tcp", localAddr, localTimeoutDuration)
 	if nil != err {
 		log.Fatalf("local ip-port %v unreachable err %v", localAddr, err.Error())
 	}
 	logger.Printf("[%v]local Connection Connected\n", localAddr)
-	remoteConn, err := net.DialTimeout("tcp", remoteAddr, time.Duration(remoteTimeout)*time.Millisecond)
+
+	remoteTimeoutDuration := time.Duration(remoteTimeout) * time.Millisecond
+	remoteConn, err := net.DialTimeout("tcp", remoteAddr, remoteTimeoutDuration)
 	if nil != err {
 		log.Fatalf("remote ip-port %v unreachable err %v", remoteAddr, err.Error())
 	}
 	logger.Printf("[%v]remote Connection Connected\n", remoteAddr)
 
-	clientMiddleware(localAddr, time.Duration(localTimeout), remoteAddr, time.Duration(remoteTimeout), localConn, remoteConn)
+	clientMiddleware(localAddr, localTimeoutDuration, remoteAddr, remoteTimeoutDuration, localConn, remoteConn)
 }
 
-func clientMiddleware(localAddr string, localTimeout time.Duration, remoteAddr string, remoteTimeout time.Duration, localConn, remoteConn net.Conn) {
+func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remoteAddr string, remoteTimeoutDuration time.Duration, localConn, remoteConn net.Conn) {
 	logger := log.New(os.Stdout, "middle ", log.Ldate|log.Lmicroseconds)
 	var mac string
 	var err error
@@ -97,9 +100,9 @@ func clientMiddleware(localAddr string, localTimeout time.Duration, remoteAddr s
 		case err = <-localChan:
 			start := time.Now()
 			logger.Printf("[%v][%v]err %v disconnected, trying to reconnect\n", localAddr, mac, err.Error())
-			localConn, err = net.DialTimeout("tcp", localAddr, localTimeout)
+			localConn, err = net.DialTimeout("tcp", localAddr, localTimeoutDuration)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", localAddr, mac, err)
-			duration := localTimeout - time.Since(start)
+			duration := localTimeoutDuration - time.Since(start)
 			if duration > 0 {
 				time.Sleep(duration)
 			}
@@ -107,9 +110,9 @@ func clientMiddleware(localAddr string, localTimeout time.Duration, remoteAddr s
 		case err = <-remoteChan:
 			start := time.Now()
 			logger.Printf("[%v][%v]err %v disconnect, trying to reconnect\n", remoteAddr, mac, err.Error())
-			remoteConn, err = net.DialTimeout("tcp", remoteAddr, remoteTimeout)
+			remoteConn, err = net.DialTimeout("tcp", remoteAddr, remoteTimeoutDuration)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", remoteAddr, mac, err)
-			duration := remoteTimeout - time.Since(start)
+			duration := remoteTimeoutDuration - time.Since(start)
 			if duration > 0 {
 				time.Sleep(duration)
 			}
