@@ -7,34 +7,43 @@ import (
 	"log"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
 
 func main() {
-	if len(os.Args) <= 2 {
+	if len(os.Args) <= 4 {
 		log.Fatalf("need local ip-port and remote ip-port")
 	}
 	logger := log.New(os.Stdout, "main   ", log.Ldate|log.Lmicroseconds)
 
 	localAddr := os.Args[1]
-	remoteAddr := os.Args[2]
+	localTimeout, err := strconv.ParseInt(os.Args[2], 10, 64)
+	if err != nil {
+		logger.Fatalf("parse local timeout fail,err:%s", err)
+	}
+	remoteAddr := os.Args[3]
+	remoteTimeout, err := strconv.ParseInt(os.Args[4], 10, 64)
+	if err != nil {
+		logger.Fatalf("parse remote timeout fail,err:%s", err)
+	}
 
-	localConn, err := net.DialTimeout("tcp", localAddr, 3*time.Second)
+	localConn, err := net.DialTimeout("tcp", localAddr, time.Duration(localTimeout)*time.Millisecond)
 	if nil != err {
 		log.Fatalf("local ip-port %v unreachable err %v", localAddr, err.Error())
 	}
 	logger.Printf("[%v]local Connection Connected\n", localAddr)
-	remoteConn, err := net.DialTimeout("tcp", remoteAddr, 3*time.Second)
+	remoteConn, err := net.DialTimeout("tcp", remoteAddr, time.Duration(remoteTimeout)*time.Millisecond)
 	if nil != err {
 		log.Fatalf("remote ip-port %v unreachable err %v", remoteAddr, err.Error())
 	}
 	logger.Printf("[%v]remote Connection Connected\n", remoteAddr)
 
-	clientMiddleware(localAddr, remoteAddr, localConn, remoteConn)
+	clientMiddleware(localAddr, time.Duration(localTimeout), remoteAddr, time.Duration(remoteTimeout), localConn, remoteConn)
 }
 
-func clientMiddleware(localAddr, remoteAddr string, localConn, remoteConn net.Conn) {
+func clientMiddleware(localAddr string, localTimeout time.Duration, remoteAddr string, remoteTimeout time.Duration, localConn, remoteConn net.Conn) {
 	logger := log.New(os.Stdout, "middle ", log.Ldate|log.Lmicroseconds)
 	var mac string
 	var err error
@@ -87,12 +96,12 @@ func clientMiddleware(localAddr, remoteAddr string, localConn, remoteConn net.Co
 		select {
 		case err = <-localChan:
 			logger.Printf("[%v][%v]err %v disconnected, trying to reconnect\n", localAddr, mac, err.Error())
-			localConn, err = net.DialTimeout("tcp", localAddr, 3000*time.Millisecond)
+			localConn, err = net.DialTimeout("tcp", localAddr, localTimeout)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", localAddr, mac, err)
 			localConnChan <- localConn
 		case err = <-remoteChan:
 			logger.Printf("[%v][%v]err %v disconnect, trying to reconnect\n", remoteAddr, mac, err.Error())
-			remoteConn, err = net.DialTimeout("tcp", remoteAddr, 3000*time.Millisecond)
+			remoteConn, err = net.DialTimeout("tcp", remoteAddr, remoteTimeout)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", remoteAddr, mac, err)
 			remoteConnChan <- remoteConn
 		}
