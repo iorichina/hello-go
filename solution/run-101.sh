@@ -1,0 +1,2 @@
+./tcp_client_middleware 192.168.1.101:2102 3000  coinpush.pokekara.com:10112 3000 >>log-101.log 2>&1 &
+
