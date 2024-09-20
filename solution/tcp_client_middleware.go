@@ -103,7 +103,7 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 			localConn, err = net.DialTimeout("tcp", localAddr, localTimeoutDuration)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", localAddr, mac, err)
 			duration := localTimeoutDuration - time.Since(start)
-			if duration > 0 {
+			if nil != err && duration > 0 {
 				time.Sleep(duration)
 			}
 			localConnChan <- localConn
@@ -113,7 +113,7 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 			remoteConn, err = net.DialTimeout("tcp", remoteAddr, remoteTimeoutDuration)
 			logger.Printf("[%v][%v]Connection reconnect with %v\n", remoteAddr, mac, err)
 			duration := remoteTimeoutDuration - time.Since(start)
-			if duration > 0 {
+			if nil != err && duration > 0 {
 				time.Sleep(duration)
 			}
 			remoteConnChan <- remoteConn
@@ -176,6 +176,12 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 				}
 				reader.Reset(localConn)
 				//readerChan <- reader
+
+				_, err = localConn.Write([]byte{254, 134, 226, 1, 121, 29, 9, 52, 61})
+				if err != nil {
+					logger.Printf("[%v][%v]Write(0x34) err %v\n", localAddr, mac, err)
+				}
+
 				break
 			}
 		}
@@ -201,6 +207,7 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 			if 0x35 == buf[7] {
 				mac = strings.Join([]string{string(buf[8:10]), string(buf[10:12]), string(buf[12:14]), string(buf[14:16]), string(buf[16:18]), string(buf[18:20])}, ":")
 				macChan <- mac
+				logger.Printf("[%v][%v]heartbeat\n", localAddr, mac)
 			}
 		}
 
@@ -281,6 +288,12 @@ func handleRemote(localAddr, remoteAddr string, macChan chan string, remoteConn 
 			_ = conn.Close()
 			remoteChan <- err
 			continue
+		}
+
+		if n > 8 && 0xFE == buf[0] && 0x01 == buf[3] {
+			if 0x34 == buf[7] {
+				logger.Printf("[%v][%v]status query\n", remoteAddr, mac)
+			}
 		}
 
 		dup := make([]byte, n)

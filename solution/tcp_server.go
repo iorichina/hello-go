@@ -82,6 +82,12 @@ func process(logger *log.Logger, conn net.Conn) {
 			if 0x34 == buf[7] {
 				mac = strings.Join([]string{string(buf[9:11]), string(buf[11:13]), string(buf[13:15]), string(buf[15:17]), string(buf[17:19]), string(buf[19:21])}, ":")
 				logger.Printf("[%v][%v]读 %#x 状态 %d (0=idle,1=playing,>1=error)\n", remote, mac, buf[7], buf[8])
+				if buf[8] == 0 {
+					_, err = conn.Write([]byte{254, 134, 226, 1, 121, 29, 11, 48, 90, 0, 149})
+					if err != nil {
+						logger.Printf("[%v]Write(0x30) err %v\n", remote, err)
+					}
+				}
 				continue
 			}
 			if 0x35 == buf[7] {
