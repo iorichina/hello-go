@@ -51,22 +51,13 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 	var mac string
 	var err error
 
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Printf("[%v]>[%v][%v]Recovered from panic: %#v", localAddr, remoteAddr, mac, r)
-		}
-	}()
 	defer func(conn net.Conn) {
 		err := conn.Close()
-		if err != nil {
-			logger.Printf("[%v]->[%v][%v]localConn Close err %v\n", localAddr, remoteAddr, mac, err.Error())
-		}
+		logger.Printf("[%v]->[%v][%v]Connection local Close %v\n", localAddr, remoteAddr, mac, err)
 	}(localConn) // 关闭连接
 	defer func(conn net.Conn) {
 		err := conn.Close()
-		if err != nil {
-			logger.Printf("[%v]->[%v][%v]remoteConn Close err %v\n", localAddr, remoteAddr, mac, err.Error())
-		}
+		logger.Printf("[%v]->[%v][%v]Connection remote Close %v\n", localAddr, remoteAddr, mac, err)
 	}(remoteConn) // 关闭连接
 
 	localChan := make(chan error)
@@ -74,12 +65,12 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 	remoteChan := make(chan error)
 	defer close(remoteChan)
 
-	localQueue := make(chan []byte)
+	localQueue := make(chan []byte, 128)
 	defer close(localQueue)
-	remoteQueue := make(chan []byte)
+	remoteQueue := make(chan []byte, 128)
 	defer close(remoteQueue)
 
-	macChan := make(chan string)
+	macChan := make(chan string, 128)
 	defer close(macChan)
 	go func() {
 		for m := range macChan {
@@ -99,9 +90,9 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 		select {
 		case err = <-localChan:
 			start := time.Now()
-			logger.Printf("[%v][%v]Connection %v err disconnected, trying to reconnect\n", localAddr, mac, err.Error())
+			logger.Printf("[%v][%v]Connection local err, %v, trying to reconnect\n", localAddr, mac, err)
 			localConn, err = net.DialTimeout("tcp", localAddr, localTimeoutDuration)
-			logger.Printf("[%v][%v]Connection reconnect result %v with %v\n", localAddr, mac, localConn, err)
+			logger.Printf("[%v][%v]Connection local reconnect %v with %v\n", localAddr, mac, localConn, err)
 			duration := localTimeoutDuration - time.Since(start)
 			if nil != err && duration > 0 {
 				time.Sleep(duration)
@@ -109,9 +100,9 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 			localConnChan <- localConn
 		case err = <-remoteChan:
 			start := time.Now()
-			logger.Printf("[%v][%v]Connection%v err disconnected, trying to reconnect\n", remoteAddr, mac, err.Error())
+			logger.Printf("[%v][%v]Connection remote err, %v, trying to reconnect\n", remoteAddr, mac, err)
 			remoteConn, err = net.DialTimeout("tcp", remoteAddr, remoteTimeoutDuration)
-			logger.Printf("[%v][%v]Connection reconnect result %v with %v\n", remoteAddr, mac, remoteConn, err)
+			logger.Printf("[%v][%v]Connection remote reconnect %v with %v\n", remoteAddr, mac, remoteConn, err)
 			duration := remoteTimeoutDuration - time.Since(start)
 			if nil != err && duration > 0 {
 				time.Sleep(duration)
@@ -126,12 +117,6 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 	var mac string
 	var err error
 
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Printf("[%v][%v]Recovered from panic: %#v", localAddr, mac, r)
-		}
-	}()
-
 	reader := bufio.NewReader(localConn)
 	var buf [1024]byte
 	var n int
@@ -140,19 +125,26 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 		for bb := range localQueue {
 			conn := localConn
 			if nil == conn {
+				if len(bb) > 8 && 0xFE == bb[0] && 0x01 == bb[3] {
+					if 0x31 == bb[7] {
+						bb[10] = bb[10] - bb[9] - bb[8]
+						bb[8] = 0x00
+						bb[9] = 0x00
+						remoteQueue <- bb
+					}
+					//todo 0x34
+				}
 				continue
 			}
 			_, err = conn.Write(bb)
 			if err != nil {
-				logger.Printf("[%v][%v]Write err %v\n", localAddr, mac, err.Error())
+				logger.Printf("[%v][%v]Write err %v\n", localAddr, mac, err)
 			}
 		}
 	}()
 
 	_, err = localConn.Write([]byte{254, 134, 226, 1, 121, 29, 9, 52, 61})
-	if err != nil {
-		logger.Printf("[%v][%v]Write(0x34) err %v\n", localAddr, mac, err)
-	}
+	logger.Printf("[%v][%v]Write(0x34) with %v\n", localAddr, mac, err)
 	for {
 		if nil == localConn {
 			for {
@@ -166,18 +158,16 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 				// reader.Reset(localConn)
 				reader = bufio.NewReader(localConn)
 				_, err = localConn.Write([]byte{254, 134, 226, 1, 121, 29, 9, 52, 61})
-				if err != nil {
-					logger.Printf("[%v][%v]Write(0x34) err %v\n", localAddr, mac, err)
-				}
+				logger.Printf("[%v][%v]Write(0x34) with %v\n", localAddr, mac, err)
 				break
 			}
 		}
 		n, err = reader.Read(buf[:]) // todo 粘包
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				logger.Printf("[%v][%v]Read EOF %#v\n", localAddr, mac, err)
+				logger.Printf("[%v][%v]Connection Read EOF %v\n", localAddr, mac, err)
 			} else {
-				logger.Printf("[%v][%v]Read failed err %v\n", localAddr, mac, err.Error())
+				logger.Printf("[%v][%v]Connection Read failed %v\n", localAddr, mac, err)
 			}
 			conn := localConn
 			localConn = nil
@@ -190,6 +180,7 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 			if 0x34 == buf[7] {
 				mac = strings.Join([]string{string(buf[9:11]), string(buf[11:13]), string(buf[13:15]), string(buf[15:17]), string(buf[17:19]), string(buf[19:21])}, ":")
 				macChan <- mac
+				logger.Printf("[%v][%v]status query resp % X\n", localAddr, mac, buf[8])
 			}
 			if 0x35 == buf[7] {
 				mac = strings.Join([]string{string(buf[8:10]), string(buf[10:12]), string(buf[12:14]), string(buf[14:16]), string(buf[16:18]), string(buf[18:20])}, ":")
@@ -208,12 +199,6 @@ func handleRemote(localAddr, remoteAddr string, macChan chan string, remoteConn 
 	logger := log.New(os.Stdout, "remote ", log.Ldate|log.Lmicroseconds)
 	var mac string
 	var err error
-
-	defer func() {
-		if r := recover(); r != nil {
-			logger.Printf("[%v][%v]Recovered from panic: %#v", remoteAddr, mac, r)
-		}
-	}()
 
 	go func() {
 		for m := range macChan {
@@ -256,9 +241,9 @@ func handleRemote(localAddr, remoteAddr string, macChan chan string, remoteConn 
 		n, err = reader.Read(buf[:]) // todo 粘包
 		if err != nil {
 			if errors.Is(err, io.EOF) {
-				logger.Printf("[%v][%v]Read EOF %#v\n", remoteAddr, mac, err)
+				logger.Printf("[%v][%v]Connection Read EOF %v\n", remoteAddr, mac, err)
 			} else {
-				logger.Printf("[%v][%v]Read failed err %v\n", remoteAddr, mac, err.Error())
+				logger.Printf("[%v][%v]Connection Read failed %v\n", remoteAddr, mac, err)
 			}
 			conn := remoteConn
 			remoteConn = nil
