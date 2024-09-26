@@ -112,6 +112,10 @@ func process(logger *log.Logger, conn net.Conn) {
 					logger.Printf("[%v][%v]Write(0x32) err %v\n", remote, mac, err)
 					continue
 				}
+				_, err = conn.Write([]byte{254, 134, 226, 1, 121, 29, 9, 52, 61})
+				if err != nil {
+					logger.Printf("[%v]Write(0x34) err %v\n", remote, err)
+				}
 				continue
 			}
 			logger.Printf("[%v][%v]读 %#x\t% X\n", remote, mac, buf[7], buf[:n])
