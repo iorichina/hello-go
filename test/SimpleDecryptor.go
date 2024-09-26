@@ -1,4 +1,4 @@
-package main
+package test
 
 import (
 	"encoding/base64"
@@ -84,5 +84,5 @@ func substring(str string, beginInclude int, endExclude int) string {
 	if endExclude > length {
 		endExclude = length
 	}
-	return string(rs[beginInclude : endExclude])
+	return string(rs[beginInclude:endExclude])
 }

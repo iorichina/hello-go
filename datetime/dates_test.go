@@ -1,4 +1,4 @@
-package hello_utils
+package datetime
 
 import (
 	"testing"
@@ -10,13 +10,31 @@ func TestCheckExpireDays(t *testing.T) {
 	funcName(t, now)
 	now = time.Date(2024, 4, 26, 0, 0, 0, 0, time.Local)
 	funcName(t, now)
-	//临过期不足7天
+
+	//已过期第14天
 	days := -14
 	now = time.Date(2024, 12, 12, 0, 0, 0, 0, time.Local)
 	endTime := time.Date(2024, 11, 28, 16, 28, 55, 0, time.Local)
 	b := CheckExpireDays(endTime, now, days, false)
 	if !b {
-		t.Errorf("临过期不足7天 endTime=%v days=%v now=%v now+days=%v 测试不通过", endTime.Format(DefaultDateTimeFormat), days, now.Format(DefaultDateTimeFormat), now.AddDate(0, 0, days).Format(DefaultDateTimeFormat))
+		t.Errorf("已过期第14天 endTime=%v days=%v now=%v now+days=%v 测试不通过", endTime.Format(DefaultDateTimeFormat), days, now.Format(DefaultDateTimeFormat), now.AddDate(0, 0, days).Format(DefaultDateTimeFormat))
+	}
+
+	//临过期不足7天当天true
+	days = 7
+	now = time.Date(2024, 11, 12, 0, 0, 0, 0, time.Local)
+	endTime = time.Date(2024, 11, 12, 16, 28, 55, 0, time.Local)
+	b = CheckExpireDays(endTime, now, days, true)
+	if !b {
+		t.Errorf("临过期不足7天当天true endTime=%v days=%v now=%v now+days=%v 测试不通过", endTime.Format(DefaultDateTimeFormat), days, now.Format(DefaultDateTimeFormat), now.AddDate(0, 0, days).Format(DefaultDateTimeFormat))
+	}
+	//临过期不足7天当天false
+	days = 7
+	now = time.Date(2024, 11, 12, 18, 0, 0, 0, time.Local)
+	endTime = time.Date(2024, 11, 12, 16, 28, 55, 0, time.Local)
+	b = CheckExpireDays(endTime, now, days, true)
+	if b {
+		t.Errorf("临过期不足7天当天false endTime=%v days=%v now=%v now+days=%v 测试不通过", endTime.Format(DefaultDateTimeFormat), days, now.Format(DefaultDateTimeFormat), now.AddDate(0, 0, days).Format(DefaultDateTimeFormat))
 	}
 }
 

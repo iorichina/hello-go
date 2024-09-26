@@ -1,4 +1,4 @@
-package hello_io
+package io
 
 import (
 	"io"

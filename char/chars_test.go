@@ -1,9 +1,9 @@
-package hello_utils_test
+package char_test
 
 import (
 	"errors"
 	"fmt"
-	. "hello-go/hello_utils"
+	. "hello-go/char"
 	"reflect"
 	"testing"
 )

@@ -1,4 +1,4 @@
-package hello_crypto
+package crypto
 
 import (
 	"crypto/md5"

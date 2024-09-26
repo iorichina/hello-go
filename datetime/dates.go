@@ -1,4 +1,4 @@
-package hello_utils
+package datetime
 
 import "time"
 
@@ -18,10 +18,10 @@ func CheckExpireDays(endTime, now time.Time, days int, daysMore bool) bool {
 	if daysMore {
 		if days > 0 {
 			//now不能大于endTime，否则就不是临过期，而是已过期
-			return d0.Before(t)
+			return now.Before(endTime)
 		} else {
 			//now不能小于endTime，否则就不是已过期，而是临过期
-			return d0.After(t)
+			return now.After(endTime)
 		}
 	}
 

@@ -1,12 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/c4milo/unpackit"
+	"net"
 	"os"
-	"path"
-	"time"
+	"strings"
 )
 
 type Str struct {
@@ -58,6 +59,14 @@ func (s *Struct1) name() {
 	fmt.Println(s.test)
 }
 
+func setStruct1Name1(s *Struct1, name string) {
+	s.test = name
+}
+
+func setStruct1Name2(s *Struct1, name string) {
+	(*s).test = name
+}
+
 type Struct2 struct {
 	Struct1
 }
@@ -65,26 +74,61 @@ type Struct2 struct {
 func (s *Struct2) name() {
 	fmt.Println("---------", s.test)
 }
+
+var e = errors.New("")
+
+func throwE() error {
+	return e
+}
+
+type QrCodeStatus int //二维码状态
+
+const (
+	qrCodeStatusInit  QrCodeStatus = 0 //订单初始化
+	qrCodeStatusScan  QrCodeStatus = 1 //已扫码
+	qrCodeStatusPayed QrCodeStatus = 3 //已支付
+)
+
+func printQrCode(status QrCodeStatus) {
+	fmt.Println(status)
+	switch status {
+	case qrCodeStatusInit:
+		fmt.Println(1110)
+
+	case qrCodeStatusScan:
+		fmt.Println(1111)
+
+	case qrCodeStatusPayed:
+		fmt.Println(1113)
+	default:
+		fmt.Println(1119)
+	}
+}
+
+// Given a string of the form "host", "host:port", or "[ipv6::address]:port",
+// return true if the string includes a port.
+func hasPort(s string) bool { return strings.LastIndex(s, ":") > strings.LastIndex(s, "]") }
+
+// removeEmptyPort strips the empty port in ":port" to ""
+// as mandated by RFC 3986 Section 6.2.3.
+func removeEmptyPort(host string) string {
+	if hasPort(host) {
+		return strings.TrimSuffix(host, ":")
+	}
+	return host
+}
+
+func getBytes() ([]byte, error) {
+	return nil, nil
+}
+
 func main() {
-	fmt.Println(path.Base("https://gorm.io/zh_CN/docs/sql_builder.html"))
-
-	var name map[int]*Str
-	if arr, ok := name[2]; ok {
-		fmt.Println("3223")
-		fmt.Println("2333", arr)
-	}
-	getInt3()
-	data, err := test3()
-	fmt.Println(data, err)
-
-	{
-		d := -1 * time.Duration(847) * time.Second
-		fmt.Println(d, "小时")
-	}
-	{
-		d := -1 * time.Duration(84585) * time.Second
-		fmt.Println(d, "小时")
-	}
+	bs := []byte{0x38, 0x34, 0x43, 0x32, 0x45, 0x34, 0x46, 0x36, 0x42, 0x42, 0x45, 0x41}
+	fmt.Println(string(bs))
+	v := &net.OpError{}
+	marshal, _ := json.Marshal(v)
+	fmt.Printf("%#v\n", v)
+	fmt.Printf("%#v\n", marshal)
 }
 
 func getReturn4Test() {

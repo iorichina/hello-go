@@ -5,7 +5,7 @@ import (
 	"crypto/md5"
 	"fmt"
 	"github.com/jinzhu/now"
-	"hello-go/hello_utils"
+	"hello-go/char"
 	"io"
 	"math"
 	"net/http"
@@ -83,7 +83,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "fetch: %v\n", err)
 		os.Exit(1)
 	}
-	//b, err := hello_io.ReadAllAndClose(resp.Body)
+	//b, err := io.ReadAllAndClose(resp.Body)
 	//fmt.Println(string(b))
 	io.Copy(os.Stdout, resp.Body)
 
@@ -128,7 +128,7 @@ func main() {
 		return
 	}
 	if n < 10 {
-		fmt.Println("输入字符少于", 10, hello_utils.CharLen("输入字符少于"))
+		fmt.Println("输入字符少于", 10, char.CharLen("输入字符少于"))
 		return
 	}
 	s := string(buffer[:])

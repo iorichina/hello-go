@@ -1,4 +1,4 @@
-package hello_utils
+package char
 
 import (
 	"encoding/json"
