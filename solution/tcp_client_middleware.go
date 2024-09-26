@@ -180,13 +180,13 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 			if 0x34 == buf[7] {
 				mac = strings.Join([]string{string(buf[9:11]), string(buf[11:13]), string(buf[13:15]), string(buf[15:17]), string(buf[17:19]), string(buf[19:21])}, ":")
 				macChan <- mac
-				logger.Printf("[%v][%v]status query resp %#x\n", localAddr, mac, buf[8])
+				logger.Printf("[%v][%v]Read %#v status query resp %#x\n", localAddr, mac, buf[7], buf[8])
 			} else if 0x35 == buf[7] {
 				mac = strings.Join([]string{string(buf[8:10]), string(buf[10:12]), string(buf[12:14]), string(buf[14:16]), string(buf[16:18]), string(buf[18:20])}, ":")
 				macChan <- mac
-				logger.Printf("[%v][%v]heartbeat\n", localAddr, mac)
+				logger.Printf("[%v][%v]Read %#v heartbeat\n", localAddr, mac, buf[7])
 			} else {
-				logger.Printf("[%v][%v]%#v\n", localAddr, mac, buf[7])
+				logger.Printf("[%v][%v]Read %#v\n", localAddr, mac, buf[7])
 			}
 		}
 
@@ -218,7 +218,7 @@ func handleRemote(localAddr, remoteAddr string, macChan chan string, remoteConn 
 				continue
 			}
 			_, err = conn.Write(bb)
-			logger.Printf("[%v][%v]Write % X with %v\n", remoteAddr, mac, err)
+			logger.Printf("[%v][%v]Write % X with %v\n", remoteAddr, mac, bb, err)
 			if err != nil {
 			} // 发送数据
 		}
@@ -255,9 +255,9 @@ func handleRemote(localAddr, remoteAddr string, macChan chan string, remoteConn 
 
 		if n > 8 && 0xFE == buf[0] && 0x01 == buf[3] {
 			if 0x34 == buf[7] {
-				logger.Printf("[%v][%v]status query\n", remoteAddr, mac)
+				logger.Printf("[%v][%v]Read %#v status query\n", remoteAddr, mac, buf[7])
 			} else {
-				logger.Printf("[%v][%v]%#v\n", remoteAddr, mac, buf[7])
+				logger.Printf("[%v][%v]Read %#v\n", remoteAddr, mac, buf[7])
 			}
 		}
 
