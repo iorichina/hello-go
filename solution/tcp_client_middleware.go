@@ -32,14 +32,14 @@ func main() {
 	localTimeoutDuration := time.Duration(localTimeout) * time.Millisecond
 	localConn, err := net.DialTimeout("tcp", localAddr, localTimeoutDuration)
 	if nil != err {
-		log.Fatalf("local ip-port %v unreachable err %v", localAddr, err.Error())
+		log.Fatalf("local ip-port %v unreachable err %v", localAddr, err)
 	}
 	logger.Printf("[%v]local Connection Connected\n", localAddr)
 
 	remoteTimeoutDuration := time.Duration(remoteTimeout) * time.Millisecond
 	remoteConn, err := net.DialTimeout("tcp", remoteAddr, remoteTimeoutDuration)
 	if nil != err {
-		log.Fatalf("remote ip-port %v unreachable err %v", remoteAddr, err.Error())
+		log.Fatalf("remote ip-port %v unreachable err %v", remoteAddr, err)
 	}
 	logger.Printf("[%v]remote Connection Connected\n", remoteAddr)
 
@@ -137,8 +137,8 @@ func handleLocal(localAddr, remoteAddr string, macChan chan string, localConn ne
 				continue
 			}
 			_, err = conn.Write(bb)
+			logger.Printf("[%v][%v]Write % X with %v\n", localAddr, mac, bb, err)
 			if err != nil {
-				logger.Printf("[%v][%v]Write err %v\n", localAddr, mac, err)
 			}
 		}
 	}()
@@ -218,8 +218,8 @@ func handleRemote(localAddr, remoteAddr string, macChan chan string, remoteConn 
 				continue
 			}
 			_, err = conn.Write(bb)
+			logger.Printf("[%v][%v]Write % X with %v\n", remoteAddr, mac, err)
 			if err != nil {
-				logger.Printf("[%v][%v]Write err %v\n", remoteAddr, mac, err.Error())
 			} // 发送数据
 		}
 	}()
