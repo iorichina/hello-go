@@ -72,7 +72,15 @@ func process(logger *log.Logger, conn net.Conn) {
 		}
 
 		if n > 8 && 0xFE == buf[0] && 0x01 == buf[3] {
-			if 0x31 != buf[7] && 0x34 != buf[7] && 0x35 != buf[7] {
+			if 0x14 != buf[7] && 0x31 != buf[7] && 0x34 != buf[7] && 0x35 != buf[7] {
+				continue
+			}
+			if 0x14 == buf[7] {
+				_, err = conn.Write(buf[:n])
+				if err != nil {
+					logger.Printf("[%v][%v]Reply err %v\n", remote, mac, err)
+					continue
+				} // 发送数据
 				continue
 			}
 			if 0x31 == buf[7] {
@@ -124,11 +132,6 @@ func process(logger *log.Logger, conn net.Conn) {
 
 		recvStr := string(buf[:n])
 		logger.Printf("[%v]读 %v\t% X\n", remote, recvStr, buf[:n])
-		// _, err = conn.Write([]byte(recvStr))
-		// if err != nil {
-		// 	logger.Printf("[%v][%v]Reply err %v\n", remote, mac, err)
-		// 	continue
-		// } // 发送数据
 	}
 }
 
