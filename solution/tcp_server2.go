@@ -105,7 +105,7 @@ func process2(conn net.Conn) {
 	queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x42, 75}
 	queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x34, 61}
 
-	scanner := newServerScanner(conn)
+	scanner := newServer2Scanner(conn)
 	for {
 		if !scanner.Scan() {
 			err = scanner.Err()
@@ -159,7 +159,7 @@ func process2(conn net.Conn) {
 
 // 命令头	消息ID高位	消息ID低位	命令头取反	消息ID高位取反	消息ID低位取反	包长度	指令码	数据	校验位
 // 0xfe		0x00	   0x01		  0x01		 0xff		    0xfe			0x0a   0x14	  Data	  sum(包长度+指令码+数据...)%256
-func newServerScanner(rd io.Reader) *bufio.Scanner {
+func newServer2Scanner(rd io.Reader) *bufio.Scanner {
 	scanner := bufio.NewScanner(rd)
 	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
 		if atEOF && len(data) == 0 {
