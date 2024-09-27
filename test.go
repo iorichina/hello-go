@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/c4milo/unpackit"
 	"net"
 	"os"
 	"strings"
+
+	"github.com/c4milo/unpackit"
 )
 
 type Str struct {
@@ -129,6 +130,8 @@ func main() {
 	marshal, _ := json.Marshal(v)
 	fmt.Printf("%#v\n", v)
 	fmt.Printf("%#v\n", marshal)
+	fmt.Printf("'%-5v'\n", "13d")
+	fmt.Printf("'%5v'\n", "13d")
 }
 
 func getReturn4Test() {

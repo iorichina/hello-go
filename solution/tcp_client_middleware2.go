@@ -50,7 +50,7 @@ func main() {
 func clientMiddleware2(localAddr string, localTimeoutDuration time.Duration, remoteAddr string, remoteTimeoutDuration time.Duration, localConn, remoteConn net.Conn) {
 	var mac string
 	var err error
-	logger := log.New(os.Stdout, fmt.Sprintf("[%v]([%v]->[%v])middle ", mac, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+	logger := log.New(os.Stdout, fmt.Sprintf("[%17v]([%17v]->[%24v])middle ", mac, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 
 	defer func(conn net.Conn) {
 		err := conn.Close()
@@ -80,7 +80,7 @@ func clientMiddleware2(localAddr string, localTimeoutDuration time.Duration, rem
 	go func() {
 		for m := range macChan {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%v]([%v]->[%v])middle ", m, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger = log.New(os.Stdout, fmt.Sprintf("[%17v]([%17v]->[%24v])middle ", m, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 			}
 			mac = m
 			macChanLocal <- m
@@ -125,12 +125,12 @@ func clientMiddleware2(localAddr string, localTimeoutDuration time.Duration, rem
 func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan string, localConn net.Conn, localConnChan chan net.Conn, localQueue, remoteQueue chan []byte, localChan, remoteChan chan error) {
 	var mac string
 	var err error
-	logger := log.New(os.Stdout, fmt.Sprintf("[%v][%v]local  ", mac, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%17v]local  ", mac, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 
 	go func() {
 		for m := range macChanLocal {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%v][%v]local  ", m, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%17v]local  ", m, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 			}
 			mac = m
 		}
@@ -154,9 +154,11 @@ func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 			_, err = conn.Write(bb)
 			if err != nil {
 			}
-			if len(bb) > 8 && 0x14 == bb[7] {
-			} else {
-				logger.Printf("Write % X with %v\n", bb, err)
+			if len(bb) > 8 && 0xFE == bb[0] && 0x01 == bb[3] {
+				if 0x14 == bb[7] {
+				} else {
+					logger.Printf("Write %#v with %v\n", bb[7], err)
+				}
 			}
 		}
 	}()
@@ -224,12 +226,12 @@ func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 func handleRemote2(localAddr, remoteAddr string, macChan, macChanRemote chan string, remoteConn net.Conn, remoteConnChan chan net.Conn, localQueue, remoteQueue chan []byte, localChan, remoteChan chan error) {
 	var mac string
 	var err error
-	logger := log.New(os.Stdout, fmt.Sprintf("[%v][%v]remote ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%24v]remote ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 
 	go func() {
 		for m := range macChanRemote {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%v][%v]remote ", m, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%24v]remote ", m, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 			}
 			mac = m
 		}
@@ -244,9 +246,11 @@ func handleRemote2(localAddr, remoteAddr string, macChan, macChanRemote chan str
 			_, err = conn.Write(bb)
 			if err != nil {
 			} // 发送数据
-			if len(bb) > 8 && 0x14 == bb[7] {
-			} else {
-				logger.Printf("Write % X with %v\n", bb, err)
+			if len(bb) > 8 && 0xFE == bb[0] && 0x01 == bb[3] {
+				if 0x14 == bb[7] {
+				} else {
+					logger.Printf("Write %#x with %v\n", bb[7], err)
+				}
 			}
 		}
 	}()
