@@ -219,8 +219,8 @@ func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 				mac = m
 				macChan <- m
 				logger.Printf("Read %#v\n", buf[7])
-			} else if 0x31 == buf[7] || 0x34 == buf[7] || 0x35 == buf[7] {
-				logger.Printf("Read %#v\n", buf[7])
+			} else if 0x31 == buf[7] {
+				logger.Printf("Read %#v with % X\n", buf[7], buf[8:10])
 			}
 		}
 
