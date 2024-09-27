@@ -71,15 +71,27 @@ func process2(conn net.Conn) {
 				}
 			}
 		}
+		queueChan = nil
 	}()
 
 	heartbeatChan := make(chan []byte)
 	defer close(heartbeatChan)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Printf("Recovered heartbeat from panic: %v\n", r)
+			}
+		}()
 		for {
+			if nil == queueChan {
+				break
+			}
 			select {
 			case <-heartbeatChan:
 			case <-time.After(15 * time.Second):
+			}
+			if nil == queueChan {
+				break
 			}
 			queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x33, 60}
 			queueChan <- []byte{254, 73, 66, 1, 182, 189, 11, 0x31, 0, 1, 61}
