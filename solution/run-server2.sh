@@ -1,0 +1,1 @@
+./tcp_server2 >>server2.log 2>&1 &
