@@ -152,8 +152,11 @@ func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 				continue
 			}
 			_, err = conn.Write(bb)
-			logger.Printf("Write % X with %v\n", bb, err)
 			if err != nil {
+			}
+			if len(bb) > 8 && 0x14 == bb[7] {
+			} else {
+				logger.Printf("Write % X with %v\n", bb, err)
 			}
 		}
 	}()
@@ -239,9 +242,12 @@ func handleRemote2(localAddr, remoteAddr string, macChan, macChanRemote chan str
 				continue
 			}
 			_, err = conn.Write(bb)
-			logger.Printf("Write % X with %v\n", bb, err)
 			if err != nil {
 			} // 发送数据
+			if len(bb) > 8 && 0x14 == bb[7] {
+			} else {
+				logger.Printf("Write % X with %v\n", bb, err)
+			}
 		}
 	}()
 
