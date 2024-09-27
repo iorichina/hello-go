@@ -209,7 +209,7 @@ func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 				if m != mac {
 					logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", m, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 				}
-				logger.Printf("Read %#v with %#x\n", buf[7], buf[8])
+				logger.Printf("Read %#v with %d (0=idle,1=playing,>1=error)\n", buf[7], buf[8])
 			} else if 0x35 == buf[7] {
 				m := strings.Join([]string{string(buf[8:10]), string(buf[10:12]), string(buf[12:14]), string(buf[14:16]), string(buf[16:18]), string(buf[18:20])}, ":")
 				macChan <- m
