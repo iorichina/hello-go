@@ -44,25 +44,7 @@ func main() {
 	}
 	logger.Printf("[%v]remote Connection Connected\n", remoteAddr)
 
-	for {
-		clientMiddleware(localAddr, localTimeoutDuration, remoteAddr, remoteTimeoutDuration, localConn, remoteConn)
-
-		localConn, err = net.DialTimeout("tcp", localAddr, localTimeoutDuration)
-		if nil != err {
-			logger.Printf("local ip-port %v unreachable err %v", localAddr, err)
-			continue
-		}
-		logger.Printf("[%v]local Connection Connected\n", localAddr)
-
-		remoteConn, err = net.DialTimeout("tcp", remoteAddr, remoteTimeoutDuration)
-		if nil != err {
-			logger.Printf("remote ip-port %v unreachable err %v", remoteAddr, err)
-			_ = localConn.Close()
-			continue
-		}
-		logger.Printf("[%v]remote Connection Connected\n", remoteAddr)
-	}
-	//todo re-run manually
+	clientMiddleware(localAddr, localTimeoutDuration, remoteAddr, remoteTimeoutDuration, localConn, remoteConn)
 }
 
 func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remoteAddr string, remoteTimeoutDuration time.Duration, localConn, remoteConn net.Conn) {
@@ -118,7 +100,7 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 		select {
 		case err = <-localChan:
 			if true {
-				logger.Printf("Connection local err, %v, return middleware\n", err)
+				logger.Printf("Connection local err, %v, stop process\n", err)
 				return
 			}
 			start := time.Now()
