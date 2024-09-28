@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"strings"
@@ -93,17 +94,17 @@ func process2(conn net.Conn) {
 			if nil == queueChan {
 				break
 			}
-			queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x33, 60}
-			queueChan <- []byte{254, 73, 66, 1, 182, 189, 11, 0x31, 0, 1, 61}
-			queueChan <- []byte{254, 134, 226, 1, 121, 29, 10, 0x32, 2, 62}
-			queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x34, 61}
+			queueChan <- newServer2Msg(0x33, nil)
+			queueChan <- newServer2Msg(0x31, []byte{0, 1})
+			queueChan <- newServer2Msg(0x32, []byte{0x02})
+			queueChan <- newServer2Msg(0x34, nil)
 		}
 	}()
 
-	queueChan <- []byte{254, 134, 226, 1, 121, 29, 11, 0x30, 90, 0, 149}
-	queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x33, 60}
-	queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x42, 75}
-	queueChan <- []byte{254, 134, 226, 1, 121, 29, 9, 0x34, 61}
+	queueChan <- newServer2Msg(0x30, []byte{90, 0})
+	queueChan <- newServer2Msg(0x33, nil)
+	queueChan <- newServer2Msg(0x42, nil)
+	queueChan <- newServer2Msg(0x34, nil)
 
 	scanner := newServer2Scanner(conn)
 	for {
@@ -135,7 +136,7 @@ func process2(conn net.Conn) {
 				mac = m
 				logger.Printf("Read %#x with %d (0=idle,1=playing,>1=error)\n", buf[7], buf[8])
 				if buf[8] == 0 {
-					queueChan <- []byte{254, 134, 226, 1, 121, 29, 11, 0x30, 90, 0, 149}
+					queueChan <- newServer2Msg(0x30, []byte{90, 0})
 				}
 				continue
 			}
@@ -175,4 +176,27 @@ func newServer2Scanner(rd io.Reader) *bufio.Scanner {
 		return 0, nil, nil
 	})
 	return scanner
+}
+
+func newServer2Msg(cmd byte, data []byte) []byte {
+	length := 6 + 1 + 1 + len(data) + 1
+	msg := make([]byte, length)
+	id := rand.Int() & 0xFFFF
+	msg[0] = 0xFE
+	msg[1] = byte(id >> 8)
+	msg[2] = byte(id & 0xFF)
+	msg[3] = 0x01
+	msg[4] = ^msg[1]
+	msg[5] = ^msg[2]
+	msg[6] = byte(length)
+	msg[7] = cmd
+	sum := int(msg[6]) + int(msg[7])
+	if nil != data && len(data) > 0 {
+		for i, v := range data {
+			msg[8+i] = v
+			sum += int(v)
+		}
+	}
+	msg[length-1] = byte(sum & 0xFF)
+	return msg
 }
