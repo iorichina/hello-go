@@ -78,12 +78,9 @@ func clientMiddleware1(localAddr string, localTimeoutDuration time.Duration, rem
 	}(remoteConn) // 关闭连接
 
 	localChan := make(chan error)
-	defer close(localChan)
 	remoteChan := make(chan error)
-	defer close(remoteChan)
 
 	macChan := make(chan string, 128)
-	defer close(macChan)
 	macChanLocal := make(chan string, 128)
 	macChanRemote := make(chan string, 128)
 	go func() {
@@ -113,6 +110,8 @@ func clientMiddleware1(localAddr string, localTimeoutDuration time.Duration, rem
 }
 
 func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan string, localConn, remoteConn net.Conn, localChan chan error) {
+	defer close(localChan)
+	defer close(macChan)
 	var mac string
 	var err error
 	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", mac, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
@@ -176,6 +175,7 @@ func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 }
 
 func handleRemote1(localAddr, remoteAddr string, macChan, macChanRemote chan string, localConn, remoteConn net.Conn, remoteChan chan error) {
+	defer close(remoteChan)
 	var mac string
 	var err error
 	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote  ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
