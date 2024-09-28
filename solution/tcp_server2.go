@@ -16,7 +16,7 @@ import (
 //
 // vi run-server2.sh
 //
-// ./tcp_server >>server2.log 2>&1 &
+// ./tcp_server2 >>server2.log 2>&1 &
 //
 // sudo sh run-server2.sh
 //
@@ -64,11 +64,11 @@ func process2(conn net.Conn) {
 	queueChan := make(chan []byte, 1024)
 	defer close(queueChan)
 	go func() {
-		for bb := range queueChan {
-			_, err = conn.Write(bb)
-			if len(bb) > 8 && 0xFE == bb[0] && 0x01 == bb[3] {
-				if 0x31 == bb[7] || 0x34 == bb[7] || 0x35 == bb[7] {
-					logger.Printf("Write %#v with %v\n", bb[7], err)
+		for buf := range queueChan {
+			_, err = conn.Write(buf)
+			if len(buf) > 8 && 0xFE == buf[0] && 0x01 == buf[3] {
+				if 0x31 == buf[7] || 0x34 == buf[7] || 0x35 == buf[7] {
+					logger.Printf("Write %#v(%d) with %v\n", buf[7], int(buf[1])*256+int(buf[2]), err)
 				}
 			}
 		}
