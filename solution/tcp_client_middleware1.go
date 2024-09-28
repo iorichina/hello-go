@@ -178,12 +178,12 @@ func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 func handleRemote1(localAddr, remoteAddr string, macChan, macChanRemote chan string, localConn, remoteConn net.Conn, remoteChan chan error) {
 	var mac string
 	var err error
-	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote  ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 
 	go func() {
 		for m := range macChanRemote {
 			if m != mac {
-				logger.SetPrefix(fmt.Sprintf("[%17v][%v]remote ", m, remoteAddr))
+				logger.SetPrefix(fmt.Sprintf("[%17v][%v]remote  ", m, remoteAddr))
 			}
 			mac = m
 		}
