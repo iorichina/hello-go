@@ -322,7 +322,9 @@ func newClientMiddleware3Scanner(rd io.Reader) *bufio.Scanner {
 		}
 		if len(data) > 8 && 0xFE == data[0] && 0x01 == data[3] {
 			length := int(data[6])
-			return length, data[:length], nil
+			if length >= len(data) {
+				return length, data[:length], nil
+			}
 		}
 		if atEOF {
 			return len(data), data, nil
