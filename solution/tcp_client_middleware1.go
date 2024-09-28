@@ -120,7 +120,7 @@ func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 	go func() {
 		for m := range macChanLocal {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", m, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger.SetPrefix(fmt.Sprintf("[%17v][%v]local  ", m, localAddr))
 			}
 			mac = m
 		}
@@ -165,7 +165,13 @@ func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 
 		dup := make([]byte, n)
 		copy(dup, buf[:n])
-		remoteConn.Write(dup)
+		n, err = remoteConn.Write(dup)
+
+		if n > 8 && 0xFE == dup[0] && 0x01 == dup[3] {
+			if 0x31 == dup[7] || 0x34 == dup[7] || 0x35 == dup[7] {
+				logger.Printf("Write %#v(%d) to remote[%v] with %v\n", dup[7], int(buf[1])*256+int(buf[2]), remoteAddr, err)
+			}
+		}
 	}
 }
 
@@ -177,7 +183,7 @@ func handleRemote1(localAddr, remoteAddr string, macChan, macChanRemote chan str
 	go func() {
 		for m := range macChanRemote {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote ", m, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger.SetPrefix(fmt.Sprintf("[%17v][%v]remote ", m, remoteAddr))
 			}
 			mac = m
 		}
@@ -204,6 +210,12 @@ func handleRemote1(localAddr, remoteAddr string, macChan, macChanRemote chan str
 
 		dup := make([]byte, n)
 		copy(dup, buf[:n])
-		localConn.Write(dup)
+		n, err = localConn.Write(dup)
+
+		if n > 8 && 0xFE == dup[0] && 0x01 == dup[3] {
+			if 0x31 == dup[7] || 0x34 == dup[7] || 0x35 == dup[7] {
+				logger.Printf("Write %#v(%d) to local[%v] with %v\n", dup[7], int(buf[1])*256+int(buf[2]), localAddr, err)
+			}
+		}
 	}
 }
