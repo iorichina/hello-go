@@ -10,6 +10,23 @@ import (
 	"strings"
 )
 
+func main() {
+	logger := log.New(os.Stdout, "", log.Ldate|log.Lmicroseconds)
+	listen, err := net.Listen("tcp", "0.0.0.0:80")
+	if err != nil {
+		logger.Printf("Listen() failed, err %#v\n", err)
+		return
+	}
+	for {
+		conn, err := listen.Accept() // 监听客户端的连接请求
+		if err != nil {
+			logger.Printf("Accept() failed, err: %#v\n", err)
+			continue
+		}
+		go process(logger, conn) // 启动一个goroutine来处理客户端的连接请求
+	}
+}
+
 // go build tcp_server.go
 //
 // vi run-server.sh
@@ -132,22 +149,5 @@ func process(logger *log.Logger, conn net.Conn) {
 
 		recvStr := string(buf[:n])
 		logger.Printf("[%v]读 %v\t% X\n", remote, recvStr, buf[:n])
-	}
-}
-
-func main() {
-	logger := log.New(os.Stdout, "", log.Ldate|log.Lmicroseconds)
-	listen, err := net.Listen("tcp", "0.0.0.0:80")
-	if err != nil {
-		logger.Printf("Listen() failed, err %#v\n", err)
-		return
-	}
-	for {
-		conn, err := listen.Accept() // 监听客户端的连接请求
-		if err != nil {
-			logger.Printf("Accept() failed, err: %#v\n", err)
-			continue
-		}
-		go process(logger, conn) // 启动一个goroutine来处理客户端的连接请求
 	}
 }

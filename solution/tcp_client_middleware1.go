@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"net"
 	"os"
 	"strconv"
@@ -125,7 +126,7 @@ func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 		}
 	}()
 
-	_, err = localConn.Write([]byte{254, 134, 226, 1, 121, 29, 9, 52, 61})
+	_, err = localConn.Write(newClientMiddleware1Msg(0x34, nil))
 	logger.Printf("Write(0x34) by connected with %v\n", err)
 	reader := localConn //bufio.NewReader(localConn)
 	var buf [1024]byte
@@ -144,7 +145,7 @@ func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 			if 0x34 == buf[7] {
 				m := strings.Join([]string{string(buf[9:11]), string(buf[11:13]), string(buf[13:15]), string(buf[15:17]), string(buf[17:19]), string(buf[19:21])}, ":")
 				if m != mac {
-					logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", m, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+					logger.SetPrefix(fmt.Sprintf("[%17v][%v]local  ", m, localAddr))
 				}
 				mac = m
 				macChan <- m
@@ -152,7 +153,7 @@ func handleLocal1(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 			} else if 0x35 == buf[7] {
 				m := strings.Join([]string{string(buf[8:10]), string(buf[10:12]), string(buf[12:14]), string(buf[14:16]), string(buf[16:18]), string(buf[18:20])}, ":")
 				if m != mac {
-					logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", m, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+					logger.SetPrefix(fmt.Sprintf("[%17v][%v]local  ", m, localAddr))
 				}
 				mac = m
 				macChan <- m
@@ -218,4 +219,27 @@ func handleRemote1(localAddr, remoteAddr string, macChan, macChanRemote chan str
 			}
 		}
 	}
+}
+
+func newClientMiddleware1Msg(cmd byte, data []byte) []byte {
+	length := 6 + 1 + 1 + len(data) + 1
+	msg := make([]byte, length)
+	id := rand.Int() & 0xFFFF
+	msg[0] = 0xFE
+	msg[1] = byte(id >> 8)
+	msg[2] = byte(id & 0xFF)
+	msg[3] = 0x01
+	msg[4] = ^msg[1]
+	msg[5] = ^msg[2]
+	msg[6] = byte(length)
+	msg[7] = cmd
+	sum := int(msg[6]) + int(msg[7])
+	if nil != data && len(data) > 0 {
+		for i, v := range data {
+			msg[8+i] = v
+			sum += int(v)
+		}
+	}
+	msg[length-1] = byte(sum & 0xFF)
+	return msg
 }

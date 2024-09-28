@@ -158,26 +158,6 @@ func process2(conn net.Conn) {
 	}
 }
 
-// 命令头	消息ID高位	消息ID低位	命令头取反	消息ID高位取反	消息ID低位取反	包长度	指令码	数据	校验位
-// 0xfe		0x00	   0x01		  0x01		 0xff		    0xfe			0x0a   0x14	  Data	  sum(包长度+指令码+数据...)%256
-func newServer2Scanner(rd io.Reader) *bufio.Scanner {
-	scanner := bufio.NewScanner(rd)
-	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
-		if atEOF && len(data) == 0 {
-			return 0, nil, nil
-		}
-		if len(data) > 8 && 0xFE == data[0] && 0x01 == data[3] {
-			length := int(data[6])
-			return length, data[:length], nil
-		}
-		if atEOF {
-			return len(data), data, nil
-		}
-		return 0, nil, nil
-	})
-	return scanner
-}
-
 func newServer2Msg(cmd byte, data []byte) []byte {
 	length := 6 + 1 + 1 + len(data) + 1
 	msg := make([]byte, length)
@@ -199,4 +179,24 @@ func newServer2Msg(cmd byte, data []byte) []byte {
 	}
 	msg[length-1] = byte(sum & 0xFF)
 	return msg
+}
+
+// 命令头	消息ID高位	消息ID低位	命令头取反	消息ID高位取反	消息ID低位取反	包长度	指令码	数据	校验位
+// 0xfe		0x00	   0x01		  0x01		 0xff		    0xfe			0x0a   0x14	  Data	  sum(包长度+指令码+数据...)%256
+func newServer2Scanner(rd io.Reader) *bufio.Scanner {
+	scanner := bufio.NewScanner(rd)
+	scanner.Split(func(data []byte, atEOF bool) (advance int, token []byte, err error) {
+		if atEOF && len(data) == 0 {
+			return 0, nil, nil
+		}
+		if len(data) > 8 && 0xFE == data[0] && 0x01 == data[3] {
+			length := int(data[6])
+			return length, data[:length], nil
+		}
+		if atEOF {
+			return len(data), data, nil
+		}
+		return 0, nil, nil
+	})
+	return scanner
 }

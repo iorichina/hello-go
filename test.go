@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net"
 	"os"
 	"strings"
 
@@ -124,14 +122,13 @@ func getBytes() ([]byte, error) {
 }
 
 func main() {
-	bs := []byte{0x38, 0x34, 0x43, 0x32, 0x45, 0x34, 0x46, 0x36, 0x42, 0x42, 0x45, 0x41}
-	fmt.Println(string(bs))
-	v := &net.OpError{}
-	marshal, _ := json.Marshal(v)
-	fmt.Printf("%#v\n", v)
-	fmt.Printf("%#v\n", marshal)
-	fmt.Printf("'%-5v'\n", "13d")
-	fmt.Printf("'%5v'\n", "13d")
+	mac := "84:C2:E4:F6:B8:DF"
+	fmt.Println("'" + mac + "'")
+	data2 := []byte(strings.ReplaceAll(mac, ":", ""))
+	fmt.Printf("'% X'\n", data2)
+	m := strings.Join([]string{string(data2[0:2]), string(data2[2:4]), string(data2[4:6]), string(data2[6:8]), string(data2[8:10]), string(data2[10:12])}, ":")
+	fmt.Println("'" + m + "'")
+	fmt.Println(m == mac)
 }
 
 func getReturn4Test() {
