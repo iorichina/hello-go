@@ -86,7 +86,7 @@ func clientMiddleware1(localAddr string, localTimeoutDuration time.Duration, rem
 	go func() {
 		for m := range macChan {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%17v]([%v]->[%v])middle ", m, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger.SetPrefix(fmt.Sprintf("[%17v]([%v]->[%v])middle ", m, localAddr, remoteAddr))
 			}
 			mac = m
 			macChanLocal <- m

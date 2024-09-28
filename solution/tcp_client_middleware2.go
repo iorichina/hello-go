@@ -53,10 +53,16 @@ func clientMiddleware2(localAddr string, localTimeoutDuration time.Duration, rem
 	logger := log.New(os.Stdout, fmt.Sprintf("[%17v]([%v]->[%v])middle ", mac, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 
 	defer func(conn net.Conn) {
+		if nil == conn {
+			return
+		}
 		err := conn.Close()
 		logger.Printf("Connection local Close %v\n", err)
 	}(localConn) // 关闭连接
 	defer func(conn net.Conn) {
+		if nil == conn {
+			return
+		}
 		err := conn.Close()
 		logger.Printf("Connection remote Close %v\n", err)
 	}(remoteConn) // 关闭连接
@@ -67,16 +73,11 @@ func clientMiddleware2(localAddr string, localTimeoutDuration time.Duration, rem
 	defer close(remoteChan)
 
 	localQueue := make(chan []byte, 1024)
-	defer close(localQueue)
 	remoteQueue := make(chan []byte, 1024)
-	defer close(remoteQueue)
 
 	macChan := make(chan string, 128)
-	defer close(macChan)
 	macChanLocal := make(chan string, 128)
-	defer close(macChanLocal)
 	macChanRemote := make(chan string, 128)
-	defer close(macChanRemote)
 	go func() {
 		for m := range macChan {
 			if m != mac {
@@ -86,6 +87,8 @@ func clientMiddleware2(localAddr string, localTimeoutDuration time.Duration, rem
 			macChanLocal <- m
 			macChanRemote <- m
 		}
+		defer close(macChanLocal)
+		defer close(macChanRemote)
 	}()
 
 	localConnChan := make(chan net.Conn)
@@ -123,6 +126,8 @@ func clientMiddleware2(localAddr string, localTimeoutDuration time.Duration, rem
 }
 
 func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan string, localConn net.Conn, localConnChan chan net.Conn, localQueue, remoteQueue chan []byte, localChan, remoteChan chan error) {
+	defer close(remoteQueue)
+	defer close(macChan)
 	var mac string
 	var err error
 	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", mac, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
@@ -231,6 +236,7 @@ func handleLocal2(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 }
 
 func handleRemote2(localAddr, remoteAddr string, macChan, macChanRemote chan string, remoteConn net.Conn, remoteConnChan chan net.Conn, localQueue, remoteQueue chan []byte, localChan, remoteChan chan error) {
+	defer close(localQueue)
 	var mac string
 	var err error
 	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)

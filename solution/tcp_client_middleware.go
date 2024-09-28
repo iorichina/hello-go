@@ -35,6 +35,12 @@ func main() {
 	if nil != err {
 		log.Fatalf("local ip-port %v unreachable err %v", localAddr, err)
 	}
+	defer func(conn net.Conn) {
+		if nil == conn {
+			return
+		}
+		_ = conn.Close()
+	}(localConn) // 关闭连接
 	logger.Printf("[%v]local Connection Connected\n", localAddr)
 
 	remoteTimeoutDuration := time.Duration(remoteTimeout) * time.Millisecond
@@ -42,9 +48,16 @@ func main() {
 	if nil != err {
 		log.Fatalf("remote ip-port %v unreachable err %v", remoteAddr, err)
 	}
+	defer func(conn net.Conn) {
+		if nil == conn {
+			return
+		}
+		_ = conn.Close()
+	}(remoteConn) // 关闭连接
 	logger.Printf("[%v]remote Connection Connected\n", remoteAddr)
 
 	clientMiddleware(localAddr, localTimeoutDuration, remoteAddr, remoteTimeoutDuration, localConn, remoteConn)
+	logger.Printf("([%v]->[%v])process stoped\n", localAddr, remoteAddr)
 }
 
 func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remoteAddr string, remoteTimeoutDuration time.Duration, localConn, remoteConn net.Conn) {
@@ -53,18 +66,22 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 	logger := log.New(os.Stdout, fmt.Sprintf("[%17v]([%v]->[%v])middle ", mac, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 
 	defer func(conn net.Conn) {
+		if nil == conn {
+			return
+		}
 		err := conn.Close()
-		logger.Printf("Connection local Close %v\n", err)
+		logger.Printf("Connection local defer Close %v\n", err)
 	}(localConn) // 关闭连接
 	defer func(conn net.Conn) {
+		if nil == conn {
+			return
+		}
 		err := conn.Close()
-		logger.Printf("Connection remote Close %v\n", err)
+		logger.Printf("Connection remote defer Close %v\n", err)
 	}(remoteConn) // 关闭连接
 
 	localChan := make(chan error)
-	defer close(localChan)
 	remoteChan := make(chan error)
-	defer close(remoteChan)
 
 	localQueue := make(chan []byte, 1024)
 	defer close(localQueue)
@@ -72,20 +89,19 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 	defer close(remoteQueue)
 
 	macChan := make(chan string, 128)
-	defer close(macChan)
 	macChanLocal := make(chan string, 128)
-	defer close(macChanLocal)
 	macChanRemote := make(chan string, 128)
-	defer close(macChanRemote)
 	go func() {
 		for m := range macChan {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%17v]([%v]->[%v])middle ", m, localAddr, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger.SetPrefix(fmt.Sprintf("[%17v]([%v]->[%v])middle ", m, localAddr, remoteAddr))
 			}
 			mac = m
 			macChanLocal <- m
 			macChanRemote <- m
 		}
+		defer close(macChanLocal)
+		defer close(macChanRemote)
 	}()
 
 	localConnChan := make(chan net.Conn)
@@ -123,6 +139,8 @@ func clientMiddleware(localAddr string, localTimeoutDuration time.Duration, remo
 }
 
 func handleLocal(localAddr, remoteAddr string, macChan, macChanLocal chan string, localConn net.Conn, localConnChan chan net.Conn, localQueue, remoteQueue chan []byte, localChan, remoteChan chan error) {
+	defer close(localChan)
+	defer close(macChan)
 	var mac string
 	var err error
 	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", mac, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
@@ -130,7 +148,7 @@ func handleLocal(localAddr, remoteAddr string, macChan, macChanLocal chan string
 	go func() {
 		for m := range macChanLocal {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%v]local  ", m, localAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger.SetPrefix(fmt.Sprintf("[%17v][%v]local  ", m, localAddr))
 			}
 			mac = m
 		}
@@ -164,7 +182,7 @@ func handleLocal(localAddr, remoteAddr string, macChan, macChanLocal chan string
 	}()
 
 	_, err = localConn.Write([]byte{254, 134, 226, 1, 121, 29, 9, 52, 61})
-	logger.Printf("Write(0x34) connect with %v\n", err)
+	logger.Printf("Write(0x34) by connected with %v\n", err)
 	reader := bufio.NewReader(localConn)
 	var buf [1024]byte
 	var n int
@@ -185,6 +203,10 @@ func handleLocal(localAddr, remoteAddr string, macChan, macChanLocal chan string
 				break
 			}
 		}
+		if n <= 0 {
+			continue
+		}
+
 		n, err = reader.Read(buf[:]) // todo 粘包
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -207,7 +229,7 @@ func handleLocal(localAddr, remoteAddr string, macChan, macChanLocal chan string
 				}
 				mac = m
 				macChan <- m
-				logger.Printf("Read %#v with %d (0=idle,1=playing,>1=error)\n", buf[7], buf[8])
+				logger.Printf("Read %#v(%d) with %d (0=idle,1=playing,>1=error)\n", buf[7], int(buf[1])*256+int(buf[2]), buf[8])
 			} else if 0x35 == buf[7] {
 				m := strings.Join([]string{string(buf[8:10]), string(buf[10:12]), string(buf[12:14]), string(buf[14:16]), string(buf[16:18]), string(buf[18:20])}, ":")
 				if m != mac {
@@ -215,9 +237,9 @@ func handleLocal(localAddr, remoteAddr string, macChan, macChanLocal chan string
 				}
 				mac = m
 				macChan <- m
-				logger.Printf("Read %#v\n", buf[7])
+				logger.Printf("Read %#v(%d)\n", buf[7], int(buf[1])*256+int(buf[2]))
 			} else if 0x31 == buf[7] {
-				logger.Printf("Read %#v with % X\n", buf[7], buf[8:10])
+				logger.Printf("Read %#v(%d) with % X\n", buf[7], int(buf[1])*256+int(buf[2]), buf[8:10])
 			}
 		}
 
@@ -228,14 +250,15 @@ func handleLocal(localAddr, remoteAddr string, macChan, macChanLocal chan string
 }
 
 func handleRemote(localAddr, remoteAddr string, macChan, macChanRemote chan string, remoteConn net.Conn, remoteConnChan chan net.Conn, localQueue, remoteQueue chan []byte, localChan, remoteChan chan error) {
+	defer close(remoteChan)
 	var mac string
 	var err error
-	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+	logger := log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote  ", mac, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
 
 	go func() {
 		for m := range macChanRemote {
 			if m != mac {
-				logger = log.New(os.Stdout, fmt.Sprintf("[%17v][%v]remote ", m, remoteAddr), log.Lmsgprefix|log.Ldate|log.Lmicroseconds)
+				logger.SetPrefix(fmt.Sprintf("[%17v][%v]remote  ", m, remoteAddr))
 			}
 			mac = m
 		}
