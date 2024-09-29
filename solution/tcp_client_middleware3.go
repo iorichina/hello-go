@@ -151,7 +151,7 @@ func handleLocal3(localAddr, remoteAddr string, macChan, macChanLocal chan strin
 						for i, v := range []byte(strings.ReplaceAll(mac, ":", "")) {
 							data[1+i] = v
 						}
-						newBuf := newClientMiddlewareMsg(0x34, data)
+						newBuf := newClientMiddleware3Msg(0x34, data)
 						newBuf[1] = buf[1]
 						newBuf[2] = buf[2]
 						newBuf[4] = buf[4]
