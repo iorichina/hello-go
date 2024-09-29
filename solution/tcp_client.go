@@ -20,7 +20,7 @@ func main() {
 	}
 	logger := log.New(io.MultiWriter(os.Stdout, f), "", 0)
 
-	targetAddr := "406a7637n7.goho.co:11180"
+	targetAddr := "40676377mc.vicp.fun:11180"
 	client, err := net.Dial("tcp", targetAddr)
 	if err != nil {
 		logger.Printf("%v client Dial(%v) failed, err %v\t%#v\n", time.Now().Format("2006-01-02 15:04:05.000"), targetAddr, err.Error(), err)
