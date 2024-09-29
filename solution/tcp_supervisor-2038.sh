@@ -8,5 +8,5 @@ while true; do
             ./tcp_client_middleware1 192.168.1.38:2038 3000  140.143.165.157:10112 10000 >>log-2038.log 2>&1 &
             sleep 10
         fi
-        sleep 5
+        sleep 1
 done
