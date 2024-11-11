@@ -67,7 +67,7 @@ func process2(conn net.Conn) {
 		for buf := range queueChan {
 			_, err = conn.Write(buf)
 			if len(buf) > 8 && 0xFE == buf[0] && 0x01 == buf[3] {
-				if 0x31 == buf[7] || 0x34 == buf[7] || 0x35 == buf[7] {
+				if 0x31 == buf[7] || 0x33 == buf[7] || 0x34 == buf[7] || 0x35 == buf[7] {
 					logger.Printf("Write %#v(%d) with %v\n", buf[7], int(buf[1])*256+int(buf[2]), err)
 				}
 			}
@@ -95,7 +95,7 @@ func process2(conn net.Conn) {
 				break
 			}
 			queueChan <- newServer2Msg(0x33, nil)
-			queueChan <- newServer2Msg(0x31, []byte{0, 1})
+			//queueChan <- newServer2Msg(0x31, []byte{0, 1})
 			queueChan <- newServer2Msg(0x32, []byte{0x02})
 			queueChan <- newServer2Msg(0x34, nil)
 		}
@@ -137,6 +137,8 @@ func process2(conn net.Conn) {
 				logger.Printf("Read %#x with %d (0=idle,1=playing,>1=error)\n", buf[7], buf[8])
 				if buf[8] == 0 {
 					queueChan <- newServer2Msg(0x30, []byte{90, 0})
+				} else if buf[8] > 1 {
+					queueChan <- newServer2Msg(0x38, nil)
 				}
 				continue
 			}
