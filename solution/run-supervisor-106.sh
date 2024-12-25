@@ -1,1 +1,0 @@
-sh tcp_supervisor-106.sh >>log-106.log 2>&1 &
