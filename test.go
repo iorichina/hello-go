@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -121,14 +122,28 @@ func getBytes() ([]byte, error) {
 	return nil, nil
 }
 
+// SpiCommonResponse 京东SPI接口通用响应结构
+type SpiCommonResponse struct {
+	// RetMessage 返回接口说明
+	// 成功返回成功，若是失败则返回错误信息
+	RetMessage string `json:"retMessage"`
+
+	// Data 返回结果数据
+	// 对json格式的业务数据进行base64编码后的值
+	Data string `json:"data,omitempty"`
+}
+
 func main() {
-	mac := "84:C2:E4:F6:B8:DF"
-	fmt.Println("'" + mac + "'")
-	data2 := []byte(strings.ReplaceAll(mac, ":", ""))
-	fmt.Printf("'% X'\n", data2)
-	m := strings.Join([]string{string(data2[0:2]), string(data2[2:4]), string(data2[4:6]), string(data2[6:8]), string(data2[8:10]), string(data2[10:12])}, ":")
-	fmt.Println("'" + m + "'")
-	fmt.Println(m == mac)
+	s := &SpiCommonResponse{
+		RetMessage: "success",
+	}
+	marshal, err := json.Marshal(s)
+	fmt.Printf("%v %v\n", string(marshal), err)
+
+	fmt.Println(fmt.Sprintf("%v", 15/8))
+	fmt.Println(fmt.Sprintf("%v", 3/8))
+	fmt.Println(fmt.Sprintf("%d", 15/8))
+	fmt.Println(fmt.Sprintf("%d", 3/8))
 }
 
 func getReturn4Test() {
